@@ -85,3 +85,36 @@ fn main() {
         RayTraceResult::Miss => println!("Ray 2: Missed"),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sphere_hit() {
+        let sphere = Sphere {
+            center: Vec3 { x: 0.0, y: 0.0, z: -5.0 },
+            radius: 1.0,
+        };
+        let ray = Ray {
+            origin: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
+            direction: Vec3 { x: 0.0, y: 0.0, z: -1.0 },
+        };
+
+        assert!(matches!(ray_trace(&ray, &sphere), RayTraceResult::Hit));
+    }
+
+    #[test]
+    fn test_sphere_miss() {
+        let sphere = Sphere {
+            center: Vec3 { x: 0.0, y: 0.0, z: -5.0 },
+            radius: 1.0,
+        };
+        let ray = Ray {
+            origin: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
+            direction: Vec3 { x: 5.0, y: 0.0, z: 0.0 },
+        };
+
+        assert!(matches!(ray_trace(&ray, &sphere), RayTraceResult::Miss));
+    }
+}
