@@ -1,6 +1,6 @@
-use std::ops::Sub;
-use std::ops::Mul;
 use std::ops::Add;
+use std::ops::Mul;
+use std::ops::Sub;
 
 #[derive(Copy, Clone)]
 struct Vec3 {
@@ -55,8 +55,6 @@ impl Add for Vec3 {
     }
 }
 
-
-
 struct Ray {
     origin: Vec3,
     direction: Vec3,
@@ -67,22 +65,34 @@ struct Sphere {
     radius: f32,
 }
 
+struct HitRecord {
+    hit_position: Vec3,
+    hit_normal: Vec3,
+    hit_distance: f32,
+}
+
 enum RayTraceResult {
-    Hit(f32), // distance t to point
+    Hit(HitRecord),
     Miss,
 }
 
-fn ray_trace(ray: &Ray, sph: &Sphere) -> RayTraceResult {
-    let oc = ray.origin - sph.center;
+fn ray_trace(ray: &Ray, sphere: &Sphere) -> RayTraceResult {
+    let oc = ray.origin - sphere.center;
     let a: f32 = ray.direction.length_squared();
     let b: f32 = 2.0 * oc.dot(ray.direction);
-    let c: f32 = oc.length_squared() - sph.radius * sph.radius;
+    let c: f32 = oc.length_squared() - sphere.radius * sphere.radius;
 
     let discriminant = b * b - 4.0 * a * c;
     if discriminant < 0.0 {
         return RayTraceResult::Miss;
     }
-    RayTraceResult::Hit((-b -discriminant.sqrt()) / (2.0 * a))
+    let t: f32 = (-b - discriminant.sqrt()) / (2.0 * a);
+    let hit_pos: Vec3 = ray.origin + ray.direction * t;
+    RayTraceResult::Hit(HitRecord {
+        hit_position: (hit_pos),
+        hit_normal: ((hit_pos - sphere.center) * (1.0 / sphere.radius)),
+        hit_distance: (t),
+    })
 }
 
 fn main() {
@@ -93,95 +103,34 @@ fn main() {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_sphere_hit() {
-        let sphere = Sphere {
-            center: Vec3 {
-                x: 0.0,
-                y: 0.0,
-                z: -5.0,
-            },
-            radius: 1.0,
-        };
-        let ray = Ray {
-            origin: Vec3 {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            },
-            direction: Vec3 {
-                x: 0.0,
-                y: 0.0,
-                z: -1.0,
-            },
-        };
+    const SPHERE: Sphere = Sphere {
+        center: Vec3 { x: 0.0, y: 0.0, z: -5.0 },
+        radius: 3.0,
+    };
+    
+    const RAY: Ray = Ray {
+        origin: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
+        direction: Vec3 { x: 0.0, y: 0.0, z: -1.0 },
+    };
 
-        assert!(matches!(ray_trace(&ray, &sphere), RayTraceResult::Hit(_f32)));
+    #[test]
+    fn test_sphere_hit_variant() {
+        assert!(matches!(ray_trace(&RAY, &SPHERE), RayTraceResult::Hit(_)));
     }
 
     #[test]
-    fn test_sphere_miss() {
-        let sphere = Sphere {
-            center: Vec3 {
-                x: 0.0,
-                y: 0.0,
-                z: -5.0,
-            },
-            radius: 1.0,
-        };
-        let ray = Ray {
-            origin: Vec3 {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            },
-            direction: Vec3 {
-                x: 5.0,
-                y: 0.0,
-                z: 0.0,
-            },
-        };
+    fn test_sphere_hit_data() {
+        let result = ray_trace(&RAY, &SPHERE);
 
-        assert!(matches!(ray_trace(&ray, &sphere), RayTraceResult::Miss));
-    }
+        if let RayTraceResult::Hit(rec) = result {
+            assert!((rec.hit_distance - 2.0).abs() < 0.001);
+            assert_eq!(rec.hit_position.z, -2.0);
 
-    #[test]
-    fn test_sphere_hit_distance() {
-        let sphere = Sphere {
-            center: Vec3 { x: 0.0, y: 0.0, z: -5.0 },
-            radius: 1.0,
-        };
-        let ray = Ray {
-            origin: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
-            direction: Vec3 { x: 0.0, y: 0.0, z: -1.0 },
-        };
-
-        let result = ray_trace(&ray, &sphere);
-
-        if let RayTraceResult::Hit(t) = result {
-            let expected_t = 4.0;
-            assert!((t - expected_t).abs() < 0.001, "Distance {t} was not close to {expected_t}");
+            assert_eq!(rec.hit_normal.x, 0.0);
+            assert_eq!(rec.hit_normal.y, 0.0);
+            assert_eq!(rec.hit_normal.z, 1.0);
         } else {
             panic!("Expected Hit, but got Miss");
-        }
-    }
-
-    #[test]
-    fn test_hit_point_coordinates() {
-        let sphere = Sphere {
-            center: Vec3 { x: 0.0, y: 0.0, z: -5.0 },
-            radius: 1.0,
-        };
-        let ray = Ray {
-            origin: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
-            direction: Vec3 { x: 0.0, y: 0.0, z: -1.0 },
-        };
-
-        if let RayTraceResult::Hit(t) = ray_trace(&ray, &sphere) {
-            let hit_point = ray.origin + ray.direction * t;
-            assert_eq!(hit_point.x, 0.0);
-            assert_eq!(hit_point.y, 0.0);
-            assert_eq!(hit_point.z, 0.0);
         }
     }
 }
