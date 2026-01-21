@@ -1,4 +1,4 @@
-use crate::hittable::{HitRecord, Hittable, RayTraceResult};
+use crate::hittable::{HitRecord, Hittable};
 use crate::ray::Ray;
 use crate::vec3::Vec3;
 

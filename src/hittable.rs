@@ -7,11 +7,6 @@ pub struct HitRecord {
     pub t: f32,
 }
 
-pub enum RayTraceResult {
-    Hit(HitRecord),
-    Miss,
-}
-
 pub trait Hittable {
     fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord>;
 }
