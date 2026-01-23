@@ -4,6 +4,8 @@
 
 **A simulation, made by the interest of learning Rust by ray tracing in 3D, which uses math for tracing each ray and translates it into .ppm file .**
 
+## Example
+![Result](example.png)
 
 ## Parameters
 

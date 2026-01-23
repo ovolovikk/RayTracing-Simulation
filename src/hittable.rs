@@ -1,6 +1,7 @@
 use crate::ray::Ray;
 use crate::vec3::Vec3;
 
+#[warn(dead_code)]
 pub struct HitRecord {
     pub p: Vec3,
     pub normal: Vec3,

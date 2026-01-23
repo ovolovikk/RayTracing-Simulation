@@ -20,9 +20,9 @@ impl Hittable for Sphere {
         }
         let sqrtd = discriminant.sqrt();
 
-        let mut root = (-b - sqrtd) / 2.0 * a;
+        let mut root = (-b - sqrtd) / (2.0 * a);
         if root < t_min || t_max < root {
-            root = (-b + sqrtd) / 2.0 * a;
+            root = (-b + sqrtd) / (2.0 * a);
             if root < t_min || t_max < root {
                 return None;
             }

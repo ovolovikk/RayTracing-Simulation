@@ -12,9 +12,10 @@ use rand::Rng;
 
 use crate::hittable::HittableList;
 
-const IMAGE_WIDTH: i32 = 400;
-const IMAGE_HEIGHT: i32 = 300;
+const IMAGE_WIDTH: i32 = 1920;
+const IMAGE_HEIGHT: i32 = 1080;
 const SAMPLES: i32 = 10;
+const DIFFUSE_DEPTH: u32 = 50;
 
 // Camera params
 const VIEWPORT_HEIGHT: f32 = 2.0;
@@ -37,15 +38,27 @@ const VERTICAL: Vec3 = Vec3 {
     z: 0.0,
 };
 
-fn ray_color(world: &HittableList, ray: &Ray) -> Vec3 {
+fn ray_color(world: &HittableList, ray: &Ray, depth: u32, rng: &mut impl Rng) -> Vec3 {
+    if depth == 0 {
+        return Vec3 { x: 0.0, y: 0.0, z: 0.0 }
+    }
+
     match world.hit(&ray, 0.001, f32::INFINITY) {
         Some(rec) => {
-            0.5 * (rec.normal
-                + Vec3 {
-                    x: 1.0,
-                    y: 1.0,
-                    z: 1.0,
-                }) // Mapping normal to [0, 1]
+            let mut rand_vec = Vec3 { x: 0.0, y: 0.0, z: 0.0 };
+            loop {
+                rand_vec = Vec3 {
+                        x: rng.gen_range(-1.0..1.0),
+                        y: rng.gen_range(-1.0..1.0),
+                        z: rng.gen_range(-1.0..1.0),
+                    };
+                    if rand_vec.length_squared() < 1.0 { break; }
+            }
+
+            let bounce_dir = rec.normal + rand_vec;
+            let new_ray= Ray { origin: rec.p, direction: bounce_dir };
+
+            0.5 * ray_color(world, &new_ray, depth - 1, rng)
         }
         None => {
             let unit_direction = ray.direction.normalize();
@@ -73,10 +86,19 @@ fn main() {
     world.objects.push(Box::new(Sphere {
         center: Vec3 {
             x: 0.0,
-            y: 0.0,
+            y: 0.5,
             z: -2.0,
         },
         radius: 0.5,
+    }));
+
+    world.objects.push(Box::new(Sphere {
+        center: Vec3 {
+            x: 0.0,
+            y: -100.0,
+            z: -2.0,
+        },
+        radius: 100.0,
     }));
 
     let lower_left_corner = ORIGIN
@@ -90,7 +112,7 @@ fn main() {
         
     // Start of a .ppm file is always same order:
     // FORMAT, WIDTH, HEIGHT, MAX_RGB
-    println!("P3\n{IMAGE_WIDTH} {IMAGE_HEIGHT}\n 255");
+    println!("P3\n{IMAGE_WIDTH} {IMAGE_HEIGHT}\n255");
     let mut rng = rand::thread_rng();
 
     for j in (0..IMAGE_HEIGHT).rev() {
@@ -99,15 +121,15 @@ fn main() {
             for k in 0..SAMPLES {
                 let offset_x: f32 = rng.gen_range(0.0..1.0);
                 let offset_y: f32 = rng.gen_range(0.0..1.0);
-                // UV [1,2]
+                // UV [0,1]
                 let u = (i as f32 + offset_x) / (IMAGE_WIDTH - 1) as f32;
                 let v = (j as f32 + offset_y) / (IMAGE_HEIGHT - 1) as f32;
                 
                 let ray = Ray {
                     origin: ORIGIN,
-                    direction: lower_left_corner + u * HORIZONTAL + v * VERTICAL - ORIGIN,
+                    direction: (lower_left_corner + u * HORIZONTAL + v * VERTICAL - ORIGIN).normalize(),
                 };
-                let pixel_color = ray_color(&world, &ray);
+                let pixel_color = ray_color(&world, &ray, DIFFUSE_DEPTH, &mut rng);
 
                 sampled_color = sampled_color + pixel_color;
             }
