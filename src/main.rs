@@ -14,7 +14,7 @@ use crate::hittable::HittableList;
 
 const IMAGE_WIDTH: i32 = 1920;
 const IMAGE_HEIGHT: i32 = 1080;
-const SAMPLES_PER_PIXEL: i32 = 10;
+const SAMPLES_PER_PIXEL: i32 = 3;
 const MAX_DEPTH: u32 = 50;
 
 // Camera params
@@ -38,43 +38,51 @@ const VIEWPORT_VERTICAL: Vec3 = Vec3 {
     z: 0.0,
 };
 
-fn ray_color(world: &HittableList, ray: &Ray, depth: u32, rng: &mut impl Rng) -> Vec3 {
+fn ray_color<F>(
+    world: &HittableList,
+    ray: &Ray,
+    depth: u32,
+    rng: &mut impl Rng,
+    background: &F,
+) -> Vec3
+where
+    F: Fn(&Ray) -> Vec3,
+{
     if depth == 0 {
-        return Vec3 { x: 0.0, y: 0.0, z: 0.0 }
+        return Vec3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        };
     }
 
     match world.hit(&ray, 0.001, f32::INFINITY) {
         Some(rec) => {
-            let mut rand_vec = Vec3 { x: 0.0, y: 0.0, z: 0.0 };
+            let mut rand_vec = Vec3 {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            };
             loop {
                 rand_vec = Vec3 {
-                        x: rng.gen_range(-1.0..1.0),
-                        y: rng.gen_range(-1.0..1.0),
-                        z: rng.gen_range(-1.0..1.0),
-                    };
-                    if rand_vec.length_squared() < 1.0 { break; }
+                    x: rng.gen_range(-1.0..1.0),
+                    y: rng.gen_range(-1.0..1.0),
+                    z: rng.gen_range(-1.0..1.0),
+                };
+                if rand_vec.length_squared() < 1.0 {
+                    break;
+                }
             }
 
-            let bounce_dir = rec.normal + rand_vec;
-            let new_ray= Ray { origin: rec.p, direction: bounce_dir };
+            let bounce_dir = (rec.normal + rand_vec).normalize();
+            let new_ray = Ray {
+                origin: rec.p,
+                direction: bounce_dir,
+            };
 
-            0.5 * ray_color(world, &new_ray, depth - 1, rng)
+            0.5 * ray_color(world, &new_ray, depth - 1, rng, background)
         }
-        None => {
-            let unit_direction = ray.direction.normalize();
-            let t = 0.5 * (unit_direction.y + 1.0); // Mapping distance to [0, 1]
-            (1.0 - t)
-                * Vec3 {
-                    x: 1.0,
-                    y: 1.0,
-                    z: 1.0,
-                }
-                + t * Vec3 {
-                    x: 0.5,
-                    y: 0.7,
-                    z: 1.0,
-                } // lerp between white and blue
-        }
+        None => background(ray),
     }
 }
 
@@ -111,15 +119,52 @@ fn main() {
         radius: 100.0,
     }));
 
-    let lower_left_corner = CAM_ORIGIN
-        - VIEWPORT_HORIZONTAL * 0.5
+    let day_sky = |r: &Ray| {
+        let unit_direction = r.direction.normalize();
+        let t = 0.5 * (unit_direction.y + 1.0);
+        (1.0 - t)
+            * Vec3 {
+                x: 1.0,
+                y: 1.0,
+                z: 1.0,
+            }
+            + t * Vec3 {
+                x: 0.5,
+                y: 0.7,
+                z: 1.0,
+            }
+    };
+
+    let deep_space = |_r: &Ray| Vec3 {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
+
+    let starry_space = |r: &Ray| {
+        let unit_dir = r.direction.normalize();
+
+        let mut stars =
+            (unit_dir.x * 400.0).sin() * (unit_dir.y * 350.0).sin() * (unit_dir.z * 900.0).sin();
+        if stars > 0.998 {
+            Vec3 {
+                x: 1.0,
+                y: 1.0,
+                z: 1.0,
+            }
+        } else {
+            deep_space(r)
+        }
+    };
+
+    let lower_left_corner = CAM_ORIGIN + -VIEWPORT_HORIZONTAL * 0.5
         - VIEWPORT_VERTICAL * 0.5
         - Vec3 {
             x: 0.0,
             y: 0.0,
             z: FOCAL_LENGTH,
         };
-        
+
     // Start of a .ppm file is always same order:
     // FORMAT, WIDTH, HEIGHT, MAX_RGB
     println!("P3\n{IMAGE_WIDTH} {IMAGE_HEIGHT}\n255");
@@ -127,25 +172,33 @@ fn main() {
 
     for j in (0..IMAGE_HEIGHT).rev() {
         for i in 0..IMAGE_WIDTH {
-            let mut sampled_color: Vec3 = Vec3{ x: 0.0, y: 0.0, z: 0.0}; 
+            let mut sampled_color: Vec3 = Vec3 {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            };
             for _k in 0..SAMPLES_PER_PIXEL {
                 let offset_x: f32 = rng.gen_range(0.0..1.0);
                 let offset_y: f32 = rng.gen_range(0.0..1.0);
                 // UV [0,1]
                 let u = (i as f32 + offset_x) / (IMAGE_WIDTH - 1) as f32;
                 let v = (j as f32 + offset_y) / (IMAGE_HEIGHT - 1) as f32;
-                
+
                 let ray = Ray {
                     origin: CAM_ORIGIN,
-                    direction: (lower_left_corner + u * VIEWPORT_HORIZONTAL + v * VIEWPORT_VERTICAL - CAM_ORIGIN).normalize(),
+                    direction: (lower_left_corner
+                        + u * VIEWPORT_HORIZONTAL
+                        + v * VIEWPORT_VERTICAL
+                        - CAM_ORIGIN)
+                        .normalize(),
                 };
-                let pixel_color = ray_color(&world, &ray, MAX_DEPTH, &mut rng);
+                let pixel_color = ray_color(&world, &ray, MAX_DEPTH, &mut rng, &day_sky);
 
                 sampled_color = sampled_color + pixel_color;
             }
             sampled_color = sampled_color / SAMPLES_PER_PIXEL as f32;
             let rgb = translate_to_rgb_color(&mut sampled_color);
-            println!("{} {} {}",rgb.0, rgb.1, rgb.2 );
+            println!("{} {} {}", rgb.0, rgb.1, rgb.2);
         }
     }
 }

@@ -1,4 +1,4 @@
-use std::ops::{Add, Mul, Sub, Div};
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
 #[derive(Copy, Clone)]
 pub struct Vec3 {
@@ -6,6 +6,68 @@ pub struct Vec3 {
     pub y: f32,
     pub z: f32,
 }
+
+impl Neg for Vec3 {
+    type Output = Vec3;
+
+    fn neg(self) -> Self::Output {
+        Vec3 {
+            x: -self.x,
+            y: -self.y,
+            z: -self.z,
+        }
+    }
+}
+
+macro_rules! impl_vec_op {
+    ($trait:ident, $method:ident) => {
+        impl $trait<Vec3> for Vec3 {
+            type Output = Vec3;
+            fn $method(self, rhs: Vec3) -> Self::Output {
+                Vec3 {
+                    x: self.x.$method(rhs.x),
+                    y: self.y.$method(rhs.y),
+                    z: self.z.$method(rhs.z),
+                }
+            }
+        }
+    };
+}
+
+macro_rules! impl_vec_op_scalar {
+    ($trait:ident, $method:ident) => {
+        impl $trait<f32> for Vec3 {
+            type Output = Vec3;
+            fn $method(self, rhs: f32) -> Self::Output {
+                Vec3 {
+                    x: self.x.$method(rhs),
+                    y: self.y.$method(rhs),
+                    z: self.z.$method(rhs),
+                }
+            }
+        }
+
+        impl $trait<Vec3> for f32 {
+            type Output = Vec3;
+            fn $method(self, rhs: Vec3) -> Self::Output {
+                Vec3 {
+                    x: self.$method(rhs.x),
+                    y: self.$method(rhs.y),
+                    z: self.$method(rhs.z),
+                }
+            }
+        }
+    };
+}
+
+impl_vec_op!(Add, add);
+impl_vec_op!(Sub, sub);
+impl_vec_op!(Mul, mul);
+impl_vec_op!(Div, div);
+impl_vec_op_scalar!(Add, add);
+impl_vec_op_scalar!(Sub, sub);
+impl_vec_op_scalar!(Mul, mul);
+impl_vec_op_scalar!(Div, div);
 
 impl Vec3 {
     pub fn dot(&self, other: Vec3) -> f32 {
@@ -22,66 +84,6 @@ impl Vec3 {
 
     pub fn normalize(&self) -> Vec3 {
         let len = self.length();
-        if len == 0.0 {
-            *self
-        } else {
-            *self * (1.0 / len)
-        }
-    }
-}
-
-impl Sub for Vec3 {
-    type Output = Vec3;
-
-    fn sub(self, rhs: Vec3) -> Self::Output {
-        Vec3 {
-            x: self.x - rhs.x,
-            y: self.y - rhs.y,
-            z: self.z - rhs.z,
-        }
-    }
-}
-
-impl Mul<f32> for Vec3 {
-    type Output = Vec3;
-
-    fn mul(self, rhs: f32) -> Self::Output {
-        Vec3 {
-            x: self.x * rhs,
-            y: self.y * rhs,
-            z: self.z * rhs,
-        }
-    }
-}
-
-impl Mul<Vec3> for f32 {
-    type Output = Vec3;
-
-    fn mul(self, rhs: Vec3) -> Self::Output {
-        rhs * self
-    }
-}
-
-impl Add for Vec3 {
-    type Output = Vec3;
-
-    fn add(self, rhs: Vec3) -> Self::Output {
-        Vec3 {
-            x: self.x + rhs.x,
-            y: self.y + rhs.y,
-            z: self.z + rhs.z,
-        }
-    }
-}
-
-impl Div<f32> for Vec3 {
-    type Output = Vec3;
-
-    fn div(self, rhs: f32) -> Self::Output {
-        Vec3 {
-            x: self.x / rhs,
-            y: self.y / rhs,
-            z: self.z / rhs,
-        }
+        if len == 0.0 { *self } else { *self / len }
     }
 }
