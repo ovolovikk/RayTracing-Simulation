@@ -71,8 +71,20 @@ impl_vec_op_scalar!(Mul, mul);
 impl_vec_op_scalar!(Div, div);
 
 impl Vec3 {
+    pub fn new(x: f32, y: f32, z: f32) -> Vec3 {
+        Vec3 { x, y, z }
+    }
+
     pub fn dot(&self, other: Vec3) -> f32 {
         self.x * other.x + self.y * other.y + self.z * other.z
+    }
+
+    pub fn cross(&self, other: Vec3) -> Vec3 {
+        Vec3::new(
+            self.y * other.z - self.z * other.y,
+            self.z * other.x - self.x * other.z,
+            self.x * other.y - self.y * other.x,
+        )
     }
 
     pub fn length_squared(&self) -> f32 {
@@ -98,7 +110,7 @@ pub fn random_unit_vector(rng: &mut impl Rng) -> Vec3 {
     let a = rng.gen_range(-1.0..1.0);
     let b = rng.gen_range(-1.0..1.0);
     let c = rng.gen_range(-1.0..1.0);
-    let v = Vec3 { x: a, y: b, z: c };
+    let v = Vec3::new(a, b, c);
     if v.near_zero() {
         random_unit_vector(rng)
     } else {

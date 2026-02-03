@@ -37,14 +37,18 @@ impl Lambertian {
 // mirror material
 pub struct Metal {
     pub albedo: Vec3,
+    pub fuzz: f32,
 }
 
 impl Metal {
-    fn scatter(&self, r_in: &Ray, rec: &HitRecord, _rng: &mut impl Rng) -> Option<ScatterRecord> {
+    fn scatter(&self, r_in: &Ray, rec: &HitRecord, rng: &mut impl Rng) -> Option<ScatterRecord> {
         let reflected = reflect(r_in.direction.normalize(), rec.normal);
+
+        let scattered_dir = reflected + self.fuzz * random_unit_vector(rng);
+
         let scattered = Ray {
             origin: rec.p,
-            direction: reflected,
+            direction: scattered_dir.normalize(),
         };
         if scattered.direction.dot(rec.normal) > 0.0 {
             Some(ScatterRecord {

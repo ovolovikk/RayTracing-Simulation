@@ -10,12 +10,12 @@ pub struct HitRecord<'a> {
     pub mat: &'a Material,
 }
 
-pub trait Hittable {
+pub trait Hittable: Sync {
     fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord<'_>>;
 }
 
 pub struct HittableList {
-    pub objects: Vec<Box<dyn Hittable>>,
+    pub objects: Vec<Box<dyn Hittable + Sync>>,
 }
 
 impl HittableList {
