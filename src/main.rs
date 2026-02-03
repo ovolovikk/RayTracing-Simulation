@@ -1,14 +1,15 @@
 mod hittable;
+mod material;
 mod ray;
 mod sphere;
 mod vec3;
 
 use core::f32;
+use material::{Lambertian, Material, Metal};
+use rand::Rng;
 use ray::Ray;
 use sphere::Sphere;
 use vec3::Vec3;
-
-use rand::Rng;
 
 use crate::hittable::HittableList;
 
@@ -49,38 +50,16 @@ where
     F: Fn(&Ray) -> Vec3,
 {
     if depth == 0 {
-        return Vec3 {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        };
+        return Vec3 { x: 0.0, y: 0.0, z: 0.0 };
     }
 
-    match world.hit(&ray, 0.001, f32::INFINITY) {
+    match world.hit(ray, 0.001, f32::INFINITY) {
         Some(rec) => {
-            let mut rand_vec = Vec3 {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            };
-            loop {
-                rand_vec = Vec3 {
-                    x: rng.gen_range(-1.0..1.0),
-                    y: rng.gen_range(-1.0..1.0),
-                    z: rng.gen_range(-1.0..1.0),
-                };
-                if rand_vec.length_squared() < 1.0 {
-                    break;
-                }
+            if let Some(s_rec) = rec.mat.scatter(ray, &rec, rng) {
+                s_rec.attenuation * ray_color(world, &s_rec.scattered, depth - 1, rng, background)
+            } else {
+                Vec3 { x: 0.0, y: 0.0, z: 0.0 }
             }
-
-            let bounce_dir = (rec.normal + rand_vec).normalize();
-            let new_ray = Ray {
-                origin: rec.p,
-                direction: bounce_dir,
-            };
-
-            0.5 * ray_color(world, &new_ray, depth - 1, rng, background)
         }
         None => background(ray),
     }
@@ -101,22 +80,50 @@ fn main() {
         objects: Vec::new(),
     };
 
+    let material_ground = Material::Lambertian(Lambertian {
+        albedo: Vec3 {
+            x: 0.8,
+            y: 0.8,
+            z: 0.0,
+        },
+    });
+
+    let material_center = Material::Lambertian(Lambertian {
+        albedo: Vec3 {
+            x: 0.1,
+            y: 0.2,
+            z: 0.5,
+        },
+    });
+
+    let material_metal  = Material::Metal(Metal { 
+        albedo: Vec3 { x: 0.8, y: 0.6, z: 0.2 } 
+    });
+
     world.objects.push(Box::new(Sphere {
         center: Vec3 {
             x: 0.0,
-            y: 0.5,
-            z: -2.0,
+            y: -100.5,
+            z: -1.0,
         },
+        radius: 100.0,
+        material: material_ground,
+    }));
+
+    world.objects.push(Box::new(Sphere {
+        center: Vec3 { x: 1.0, y: 0.0, z: -1.0 },
         radius: 0.5,
+        material: material_metal,
     }));
 
     world.objects.push(Box::new(Sphere {
         center: Vec3 {
             x: 0.0,
-            y: -100.0,
-            z: -2.0,
+            y: 0.0,
+            z: -1.0,
         },
-        radius: 100.0,
+        radius: 0.5,
+        material: material_center,
     }));
 
     let day_sky = |r: &Ray| {
@@ -144,7 +151,7 @@ fn main() {
     let starry_space = |r: &Ray| {
         let unit_dir = r.direction.normalize();
 
-        let mut stars =
+        let stars =
             (unit_dir.x * 400.0).sin() * (unit_dir.y * 350.0).sin() * (unit_dir.z * 900.0).sin();
         if stars > 0.998 {
             Vec3 {

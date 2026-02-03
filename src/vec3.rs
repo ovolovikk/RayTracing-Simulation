@@ -1,3 +1,4 @@
+use rand::Rng;
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
 #[derive(Copy, Clone)]
@@ -86,4 +87,25 @@ impl Vec3 {
         let len = self.length();
         if len == 0.0 { *self } else { *self / len }
     }
+
+    pub fn near_zero(&self) -> bool {
+        let s = 1e-8;
+        self.x.abs() < s && self.y.abs() < s && self.z.abs() < s
+    }
+}
+
+pub fn random_unit_vector(rng: &mut impl Rng) -> Vec3 {
+    let a = rng.gen_range(-1.0..1.0);
+    let b = rng.gen_range(-1.0..1.0);
+    let c = rng.gen_range(-1.0..1.0);
+    let v = Vec3 { x: a, y: b, z: c };
+    if v.near_zero() {
+        random_unit_vector(rng)
+    } else {
+        v.normalize()
+    }
+}
+
+pub fn reflect(v: Vec3, n: Vec3) -> Vec3 {
+    v - 2.0 * v.dot(n) * n
 }

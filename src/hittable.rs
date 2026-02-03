@@ -1,15 +1,17 @@
+use crate::material::Material;
 use crate::ray::Ray;
 use crate::vec3::Vec3;
 
 #[warn(dead_code)]
-pub struct HitRecord {
+pub struct HitRecord<'a> {
     pub p: Vec3,
     pub normal: Vec3,
     pub t: f32,
+    pub mat: &'a Material,
 }
 
 pub trait Hittable {
-    fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord>;
+    fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord<'_>>;
 }
 
 pub struct HittableList {
@@ -17,7 +19,7 @@ pub struct HittableList {
 }
 
 impl HittableList {
-    pub fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
+    pub fn hit<'a>(&'a self, r: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord<'a>> {
         let mut hit_anything: Option<HitRecord> = None;
         let mut closest_so_far = t_max;
 
