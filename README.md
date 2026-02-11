@@ -1,18 +1,21 @@
-# Ray tracer
+# Simple Ray Tracer in Rust
 
-### Overview
+A classic ray tracer implementation in Rust, built to explore the fundamentals of 3D rendering using path tracing.
 
-**A simulation, made by the interest of learning Rust by ray tracing in 3D, which uses math for tracing each ray and translates it into .ppm file .**
+This project demonstrates several key ray tracing concepts:
+-   **Refraction and Fresnel Effect:** Seen in the glass sphere, which correctly bends light and has more reflective edges.
+-   **Specular Reflection:** The chrome sphere acts as a perfect mirror, reflecting other objects in the scene.
+-   **Diffuse Shading:** The blue sphere shows smooth Lambertian shading.
+-   **Soft Shadows:** Achieved through area light sampling for a more realistic penumbra.
 
-## Example
+## Example Output
 ![Result](example.png)
 
-## Parameters
+## How to Run
+To render the scene, run the following command:
+```bash
+cargo run --release > image.ppm
+```
 
-* SAMPLES - number of times each point of the sphere gets hitted by the ray.
-* IMAGE_WIDTH(HEIGHT) change that for resolution of .ppm format you are going to get.
-* *CAREFUL DONT TRY 100 SAMPLES ON 8k IMAGE*
-
-### Usage
-
-``` cargo run > *the name of a picture*.ppm ```
+## Note
+Default SAMPLES per scene set to 10'000, you may wanna change it for faster but less realistic render.
